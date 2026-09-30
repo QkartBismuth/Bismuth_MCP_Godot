@@ -232,12 +232,16 @@ func _state(p: Dictionary) -> Dictionary:
 			"flags": state.get_connection_flags(i),
 			"binds": state.get_connection_binds(i),
 		})
+	# get_base_scene_state() появился в 4.5 — на более старых версиях просто не проверяем.
+	var has_base_scene := false
+	if state.has_method("get_base_scene_state"):
+		has_base_scene = state.get_base_scene_state() != null
 	return {
 		"path": path,
 		"node_count": state.get_node_count(),
 		"nodes": nodes,
 		"connections": connections,
-		"base_scene": state.get_base_scene_state() != null,
+		"base_scene": has_base_scene,
 	}
 
 
@@ -708,7 +712,7 @@ func _backups(p: Dictionary) -> Dictionary:
 			list.append({
 				"name": entry,
 				"path": BACKUP_DIR.path_join(entry),
-				"size": FileAccess.get_size(BACKUP_DIR.path_join(entry)),
+				"size": host.file_size(BACKUP_DIR.path_join(entry)),
 				"modified": FileAccess.get_modified_time(BACKUP_DIR.path_join(entry)),
 			})
 		entry = da.get_next()

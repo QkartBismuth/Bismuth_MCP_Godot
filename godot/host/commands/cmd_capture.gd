@@ -81,7 +81,7 @@ func _deliver(id: int, p: Dictionary) -> void:
 		"size": {"width": img.get_width(), "height": img.get_height()},
 		"cropped": cropped,
 		"source": str(source.get_path()) if source is Node else "viewport",
-		"bytes": FileAccess.get_size(res_path),
+		"bytes": host.file_size(res_path),
 	}))
 
 
@@ -193,7 +193,7 @@ func _resource_image(p: Dictionary) -> Dictionary:
 		"source": res_path,
 		"source_class": res.get_class(),
 		"image": {"width": img.get_width(), "height": img.get_height(), "format": str(img.get_format())},
-		"bytes": FileAccess.get_size(out_path),
+		"bytes": host.file_size(out_path),
 	}
 
 @warning_ignore_restore("inference_on_variant")

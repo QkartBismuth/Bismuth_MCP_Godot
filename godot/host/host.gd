@@ -603,6 +603,17 @@ func project_root() -> String:
 	return ProjectSettings.globalize_path("res://")
 
 
+## Размер файла в байтах. FileAccess.get_size() появился только в 4.5,
+## поэтому используем get_length(), доступный во всех ветках 4.x.
+func file_size(path: String) -> int:
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return -1
+	var length: int = f.get_length()
+	f.close()
+	return length
+
+
 func safe_res_path(path: String) -> String:
 	if path.begins_with("res://") or path.begins_with("user://"):
 		return path

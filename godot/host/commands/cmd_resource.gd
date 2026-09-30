@@ -66,7 +66,7 @@ func _info(p: Dictionary) -> Dictionary:
 		"class": res.get_class(),
 		"resource_name": res.resource_name,
 		"uid": ResourceUID.id_to_text(uid) if uid != ResourceUID.INVALID_ID else "",
-		"size": FileAccess.get_size(res_path) if FileAccess.file_exists(res_path) else -1,
+		"size": host.file_size(res_path) if FileAccess.file_exists(res_path) else -1,
 		"modified": FileAccess.get_modified_time(res_path),
 	}
 	var script := res.get_script()
@@ -280,7 +280,7 @@ func _assets(p: Dictionary) -> Dictionary:
 						if type_ok:
 							total += 1
 							if out.size() < limit:
-								var rec := {"path": full, "name": entry, "type": rtype, "size": FileAccess.get_size(full)}
+								var rec := {"path": full, "name": entry, "type": rtype, "size": host.file_size(full)}
 								if include_meta:
 									var uid := ResourceLoader.get_resource_uid(full)
 									rec["uid"] = ResourceUID.id_to_text(uid) if uid != ResourceUID.INVALID_ID else ""

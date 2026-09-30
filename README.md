@@ -88,7 +88,7 @@ AI-агент ── MCP (stdio, JSON-RPC) ──▶ Bismuth_MCP_Godot (Node/TS)
 
 - **Node.js ≥ 20.10** (проверено на 26.x)
 - **Godot 4.x редакторной сборки** — на ней построены и host-скрипты, и аддон моста,
-  и LSP. Проверено на 4.7.2.stable (Linux/Arch, AMD64)
+  и LSP. Проверено на **4.4.1** (GitHub Actions) и **4.7.2** (локально), Linux/AMD64
 - Для скриншотов и рендера: графическая сессия (`DISPLAY` или `WAYLAND_DISPLAY`)
 
 ## Установка
@@ -438,7 +438,9 @@ bash scripts/check-gd.sh                      # синтаксис GDScript (--c
    обёртка `fmt()`.
 6. `PackedScene.pack()` не требует `owner == self`, но включает только узлы с
    `owner == root`; содержимое подсцен оставляется внутри инстансов.
-7. `is_editable_by_parent()` и `Script.is_valid()` в 4.x отсутствуют.
+7. Часть API появилась только в 4.5+: `FileAccess.get_size()` и
+   `SceneState.get_base_scene_state()`. Для совместимости с 4.4 используется
+   `host.file_size()` (через `get_length()`) и проверка `has_method()`.
 8. `RegEx.new()` не принимает аргументы — шаблон задаётся через `compile()`.
 9. `ResourceLoader.get_resource_type()` не доступен из скриптов — тип определяется по
    карте «расширение → класс», собранной из `ClassDB`.

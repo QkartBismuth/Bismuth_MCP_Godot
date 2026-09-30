@@ -400,7 +400,7 @@ func _file_list(p: Dictionary) -> Dictionary:
 						files.append({
 							"path": full,
 							"name": entry,
-							"size": FileAccess.get_size(full) if FileAccess.file_exists(full) else -1,
+							"size": host.file_size(full) if FileAccess.file_exists(full) else -1,
 						})
 					else:
 						truncated = true
@@ -425,7 +425,7 @@ func _file_read(p: Dictionary) -> Dictionary:
 	if not FileAccess.file_exists(res_path):
 		return host.err("Файл не найден: %s" % res_path, "not_found")
 	var max_bytes := int(p.get("max_bytes", 262144))
-	var size := FileAccess.get_size(res_path)
+	var size: int = host.file_size(res_path)
 	var offset := int(p.get("offset", 0))
 	var f := FileAccess.open(res_path, FileAccess.READ)
 	if f == null:
@@ -509,7 +509,7 @@ func _file_stat(p: Dictionary) -> Dictionary:
 		"is_dir": is_dir,
 	}
 	if is_file:
-		out["size"] = FileAccess.get_size(res_path)
+		out["size"] = host.file_size(res_path)
 		out["modified"] = FileAccess.get_modified_time(res_path)
 		out["resource_type"] = type_name
 		var uid := ResourceLoader.get_resource_uid(res_path)

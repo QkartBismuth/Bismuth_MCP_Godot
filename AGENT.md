@@ -99,4 +99,6 @@ npm run typecheck && npm run check:gd && npm test
 Список из 11 пунктов — в README, раздел «Известные грабли Godot 4.x». Ключевые:
 `StreamPeerTCP.get_status()` требует предварительного `poll()`; `pack()` включает только
 узлы с `owner == root`; `inference_on_variant` — ошибка; `RegEx.new()` без аргументов;
-`ResourceLoader.get_resource_type()` недоступен скриптам.
+`ResourceLoader.get_resource_type()` недоступен скриптам; `FileAccess.get_size()` и
+`SceneState.get_base_scene_state()` есть только начиная с 4.5 (используй
+`host.file_size()` и `has_method`).
