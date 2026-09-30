@@ -4,7 +4,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { loadConfig } from "../src/config.js";
 import { createCtx, type Ctx } from "../src/mcp/helpers.js";
 import { createServer } from "../src/mcp/server.js";
-import { makeProject } from "./helpers.js";
+import { makeProject, waitForImport } from "./helpers.js";
 import { rmSync } from "node:fs";
 
 /**
@@ -21,6 +21,7 @@ describe("MCP-сервер", () => {
     process.env.GODOT_PROJECT = dir;
     const cfg = loadConfig(dir);
     ctx = createCtx(cfg);
+    await waitForImport(ctx);
     const server = createServer(ctx);
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     client = new Client({ name: "test", version: "1.0.0" });

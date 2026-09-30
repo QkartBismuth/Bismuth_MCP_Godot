@@ -62,6 +62,8 @@ export interface ToolDef {
   shape: ToolShape;
   readOnly?: boolean;
   idempotent?: boolean;
+  /** Инструмент работает и без открытого Godot-проекта (godot_status, scaffold). */
+  allowNoProject?: boolean;
 }
 
 export type ToolArgs = Record<string, any>;
@@ -87,6 +89,7 @@ export function defineTool(server: McpServer, name: string, opts: ToolDef, handl
     },
     (async (args: ToolArgs) => {
       try {
+        if (ctx.config.projectError && !opts.allowNoProject) throw noProjectError(ctx);
         return await handler(args ?? {}, ctx);
       } catch (err) {
         return failure(err);
@@ -103,6 +106,20 @@ export const args = {
   limit: z.number().int().min(1).max(5000).optional(),
   save: z.boolean().optional().describe("Сохранить изменения на диск"),
 };
+
+/**
+ * Ошибка для инструментов, которым нужен открытый Godot-проект.
+ * Возникает, когда сервер запущен в каталоге без project.godot
+ * и переменная GODOT_PROJECT не задана.
+ */
+export function noProjectError(ctx: Ctx): EngineError {
+  return new EngineError(
+    `Godot-проект не найден: ${ctx.config.projectError}`,
+    "no_project",
+    "Откройте каталог Godot-проекта в редакторе агента либо задайте GODOT_PROJECT " +
+      "в переменных окружения MCP-сервера (например GODOT_PROJECT=/путь/к/проекту).",
+  );
+}
 
 /** Проверяет песочницу и возвращает абсолютный путь. */
 export function ensureInsideProject(ctx: Ctx, target: string): string {

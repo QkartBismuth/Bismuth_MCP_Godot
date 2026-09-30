@@ -25,6 +25,8 @@ export const BRIDGE_DIR = "godot/editor_bridge";
 export const HOST_TARGET = ".mcp";
 export const SCRIPT_PROTOCOL = 1;
 
+type ImportState = "unknown" | "ready" | "running" | "failed";
+
 export interface GodotVersion {
   full: string;
   major: number;
@@ -77,7 +79,10 @@ export class GodotEngine {
     restarts: 0,
   };
   private versionCache: GodotVersion | null = null;
-  private importChecked = false;
+  private importState: ImportState = "unknown";
+  private importPromise: Promise<void> | null = null;
+  private importStartedAt: number | null = null;
+  private importError: string | null = null;
   private startPromise: Promise<void> | null = null;
   private onUnbound: Array<() => void> = [];
 
@@ -235,21 +240,81 @@ export class GodotEngine {
     return { addon: "res://addons/bismuth_mcp_godot", enabled: true, bridge_file: bridgeFile };
   }
 
+  /** Запускает импорт в фоне, не блокируя запуск сервера. */
+  startImportInBackground(): void {
+    if (this.config.projectError) return;
+    if (existsSync(path.join(this.config.projectRoot, ".godot"))) {
+      this.importState = "ready";
+      return;
+    }
+    if (this.importState === "running") return;
+    this.importState = "running";
+    this.importStartedAt = Date.now();
+    this.logs.pushEvent("Проект не импортирован, запускаю godot --import в фоне", "info");
+    void this.importPromise;
+    this.importPromise = this.runImport();
+  }
+
+  private async runImport(): Promise<void> {
+    try {
+      const res = await this.runCli(["--headless", "--import"], { timeout: this.config.importTimeoutMs });
+      const godotDir = path.join(this.config.projectRoot, ".godot");
+      if (res.code !== 0 || !existsSync(godotDir)) {
+        const tail = `${res.stdout}\n${res.stderr}`.split("\n").filter((l) => l.trim()).slice(-12).join("\n");
+        this.importState = "failed";
+        this.importError = `код ${res.code}: ${tail.slice(-500)}`;
+        this.logs.pushEvent(`Импорт проекта не удался (${this.importError})`, "error");
+        return;
+      }
+      this.importState = "ready";
+      this.logs.pushEvent(
+        `Импорт проекта завершён за ${Math.round((Date.now() - (this.importStartedAt ?? Date.now())) / 1000)} c`,
+        "success",
+      );
+    } catch (err) {
+      this.importState = "failed";
+      this.importError = err instanceof Error ? err.message : String(err);
+    }
+  }
+
+  /** Актуальное состояние импорта: чтение через метод сбивает сужение типов TypeScript. */
+  currentImportState(): ImportState {
+    return this.importState;
+  }
+
   private async ensureImported(): Promise<void> {
-    if (this.importChecked) return;
-    this.importChecked = true;
-    const godotDir = path.join(this.config.projectRoot, ".godot");
-    if (existsSync(godotDir)) return;
-    this.logs.pushEvent("Проект не импортирован, запускаю godot --import", "info");
-    const res = await this.runCli(["--headless", "--import"], { timeout: this.config.startTimeoutMs * 3 });
-    if (res.code !== 0 || !existsSync(godotDir)) {
-      const tail = `${res.stdout}\n${res.stderr}`.split("\n").filter((l) => l.trim()).slice(-15).join("\n");
+    if (this.config.projectError) throw noProjectError(this.config);
+    if (existsSync(path.join(this.config.projectRoot, ".godot"))) {
+      this.importState = "ready";
+      return;
+    }
+    this.startImportInBackground();
+    // Импорт идёт в фоне: на больших проектах это минуты, поэтому не блокируем запрос.
+    const state = this.currentImportState();
+    if (state === "failed") {
       throw new EngineError(
-        `Импорт проекта не удался (код ${res.code}). Возможно, project.godot повреждён или нет прав на запись.\n${tail}`,
+        `Импорт проекта не удался: ${this.importError ?? "неизвестная ошибка"}`,
         "import_failed",
+        "Запустите вручную: godot --headless --import --path " + this.config.projectRoot,
       );
     }
-    this.logs.pushEvent("Импорт проекта завершён", "success");
+    if (state === "running") {
+      const seconds = Math.max(1, Math.round(this.config.importTimeoutMs / 1000));
+      throw new EngineError(
+        `Проект ещё импортируется (godot --import) — на проектах с большим числом ассетов это занимает минуты.`,
+        "importing",
+        `Повторите запрос, когда godot_status покажет import.state = "ready" (предел ожидания ${seconds} c). ` +
+          `Ручной запуск: godot --headless --import --path ${this.config.projectRoot}`,
+      );
+    }
+  }
+
+  importInfo(): Record<string, unknown> {
+    return {
+      state: this.currentImportState(),
+      seconds: this.importState === "running" ? Math.round((Date.now() - (this.importStartedAt ?? Date.now())) / 1000) : undefined,
+      error: this.importError ?? undefined,
+    };
   }
 
   private godotArgs(opts: { render: boolean }): string[] {
@@ -311,6 +376,13 @@ export class GodotEngine {
 
   private async startHost(render: boolean): Promise<void> {
     await this.ensureImported();
+    if (!existsSync(path.join(this.config.projectRoot, ".godot"))) {
+      throw new EngineError(
+        "Проект не импортирован: запустите godot --headless --import",
+        "not_imported",
+        "MCP-сервер запускает импорт автоматически при первом обращении; либо сделайте это вручную.",
+      );
+    }
     this.installHostScripts();
     if (this.bridge.port === 0) await this.bridge.listen(this.config.bridgePort);
     // Аддон редактора читает порт/токен отсюда и переподключается при смене.
@@ -458,6 +530,14 @@ export class GodotEngine {
     await this.bridge.close();
     for (const f of this.onUnbound) f();
   }
+}
+
+function noProjectError(config: McpConfig): EngineError {
+  return new EngineError(
+    `Godot-проект не найден: ${config.projectError}`,
+    "no_project",
+    "Откройте каталог Godot-проекта рабочим каталогом агента либо задайте GODOT_PROJECT в окружении MCP-сервера.",
+  );
 }
 
 function isConnectionError(err: unknown): boolean {

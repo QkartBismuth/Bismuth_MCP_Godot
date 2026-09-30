@@ -45,12 +45,13 @@ export interface Harness {
   dispose: () => Promise<void>;
 }
 
-export async function startHarness(opts: { verbose?: boolean } = {}): Promise<Harness> {
+export async function startHarness(opts: { verbose?: boolean; waitImport?: boolean } = {}): Promise<Harness> {
   const dir = makeProject();
   process.env.GODOT_PROJECT = dir;
   const cfg = loadConfig(dir);
   cfg.verbose = opts.verbose ?? false;
   const ctx = createCtx(cfg);
+  if (opts.waitImport !== false) await waitForImport(ctx);
   return {
     ctx,
     dir,
@@ -60,6 +61,24 @@ export async function startHarness(opts: { verbose?: boolean } = {}): Promise<Ha
       rmSync(dir, { recursive: true, force: true });
     },
   };
+}
+
+/**
+ * Ждёт завершения фонового импорта проекта.
+ * Сервер запускает `godot --import` в фоне, поэтому копия фикстуры
+ * (без каталога .godot) готова к работе не сразу.
+ */
+export async function waitForImport(ctx: { config: { projectRoot: string }; engine: { startImportInBackground: () => void; importInfo: () => Record<string, unknown> } }, timeoutMs = 120_000): Promise<void> {
+  if (existsSync(path.join(ctx.config.projectRoot, ".godot"))) return;
+  ctx.engine.startImportInBackground();
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const state = String(ctx.engine.importInfo().state ?? "");
+    if (state === "ready") return;
+    if (state === "failed") throw new Error(`Импорт фикстуры не удался: ${String(ctx.engine.importInfo().error ?? "?")}`);
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  throw new Error(`Импорт фикстуры не завершился за ${timeoutMs} мс`);
 }
 
 export function sceneText(dir: string, rel: string): string {

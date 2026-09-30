@@ -12,15 +12,19 @@ export function registerProjectTools(register: Register): void {
       readOnly: true,
       description:
         "Состояние MCP-сервера и движка: версия Godot, корень проекта, запущен ли headless-хост, режим рендера, " +
-        "готов ли импорт проекта, доступные возможности (скриншоты, LSP, редактор), лимиты. Вызывайте в начале работы.",
+        "готов ли импорт проекта, доступные возможности (скриншоты, LSP, редактор), лимиты. Вызывайте в начале работы. " +
+        "Работает даже если проект не найден — тогда остальные инструменты вернут ошибку no_project.",
       shape: {
         refresh_api: z.boolean().optional().describe("Также пересобрать индекс документации API (медленно, ~7 c)"),
       },
+      allowNoProject: true,
     },
     async (a, ctx) => {
       const version = ctx.engine.version();
       const state = ctx.engine.getState();
       if (a.refresh_api) await ctx.api.ensure(version, true);
+      // Импорт запускаем заранее, чтобы агент не упёрся в таймаут первого запроса.
+      ctx.engine.startImportInBackground();
       // Не поднимаем хост только ради статуса: если он уже есть — забираем живые данные.
       const info = state.running
         ? await ctx.engine.call<Record<string, unknown>>("host.info", {}, { retry: false }).catch((e) => ({ error: (e as Error).message }))
@@ -32,10 +36,12 @@ export function registerProjectTools(register: Register): void {
         engine: { ...version, binary: ctx.config.godotBin },
         project: {
           root: ctx.config.projectRoot,
+          error: ctx.config.projectError || undefined,
           host_scripts: existsSync(path.join(hostDir, "host.gd")),
           main_scene: readMainScene(ctx.config.projectRoot),
         },
         host: state,
+        import: ctx.engine.importInfo(),
         host_info: info,
         api_index: apiMeta
           ? { ...apiMeta, file_mb: Number((ctx.api.fileSize() / 1048576).toFixed(1)) }
@@ -275,6 +281,7 @@ export function registerProjectTools(register: Register): void {
         with_input_map: z.boolean().optional().describe("Добавить базовые действия ввода (move_left/right, jump, ui_accept)"),
         physics_2d: z.enum(["default", "platformer"]).default("platformer"),
       },
+      allowNoProject: true,
     },
     async (a, ctx) => {
       const target = path.resolve(ctx.config.projectRoot, String(a.dir));

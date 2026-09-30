@@ -9,10 +9,15 @@ async function main(): Promise<void> {
   const ctx = createCtx(config);
   const server = createServer(ctx);
   ctx.engine.bindProcessCleanup();
+  // Импорт проекта запускается сразу, не дожидаясь первого запроса агента.
+  ctx.engine.startImportInBackground();
   const transport = new StdioServerTransport();
   await server.connect(transport);
   process.stderr.write(
-    `[bismuth-mcp-godot] ${SERVER_NAME} ${SERVER_VERSION} готов | проект: ${config.projectRoot} | godot: ${config.godotBin}\n`,
+    `[bismuth-mcp-godot] ${SERVER_NAME} ${SERVER_VERSION} готов | godot: ${config.godotBin} | ` +
+      (config.projectError
+        ? `проект НЕ НАЙДЕН (${config.projectRoot}) — инструменты проекта вернут no_project\n`
+        : `проект: ${config.projectRoot}\n`),
   );
 
   const shutdown = async (code: number): Promise<void> => {

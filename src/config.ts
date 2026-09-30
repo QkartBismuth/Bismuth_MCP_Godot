@@ -3,8 +3,15 @@ import { homedir } from "node:os";
 import path from "node:path";
 
 export interface McpConfig {
-  /** Абсолютный путь к корню Godot-проекта (в нём лежит project.godot). */
+  /**
+   * Абсолютный путь к корню Godot-проекта (в нём лежит project.godot).
+   * Если проект не найден, здесь остаётся каталог запуска, а projectError
+   * объясняет, что делать: сервер всё равно стартует, чтобы не ломать
+   * рабочее окружение агента в каталогах без Godot-проекта.
+   */
   projectRoot: string;
+  /** Текст ошибки поиска проекта; пустая строка, если проект найден. */
+  projectError: string;
   /** Путь к исполняемому файлу Godot. */
   godotBin: string;
   /** Разрешено ли выполнять произвольный GDScript (runtime.eval). */
@@ -14,6 +21,8 @@ export interface McpConfig {
   startTimeoutMs: number;
   stepTimeoutMs: number;
   cliTimeoutMs: number;
+  /** Таймаут фонового импорта проекта, мс. */
+  importTimeoutMs: number;
   /** Ограничения вывода. */
   maxLogLines: number;
   maxResponseBytes: number;
@@ -60,19 +69,27 @@ export function findProjectRoot(start: string): string {
 }
 
 export function loadConfig(cwd = process.cwd()): McpConfig {
-  const projectRoot = process.env.GODOT_PROJECT
-    ? findProjectRoot(process.env.GODOT_PROJECT)
-    : findProjectRoot(cwd);
+  let projectRoot = path.resolve(cwd);
+  let projectError = "";
+  try {
+    projectRoot = process.env.GODOT_PROJECT
+      ? findProjectRoot(process.env.GODOT_PROJECT)
+      : findProjectRoot(cwd);
+  } catch (err) {
+    projectError = err instanceof Error ? err.message : String(err);
+  }
   const cacheHome =
     process.env.XDG_CACHE_HOME ?? path.join(homedir(), ".cache");
   return {
     projectRoot,
+    projectError,
     godotBin: process.env.GODOT_BIN ?? "godot",
     allowEval: envBool("GODOT_MCP_ALLOW_EVAL", false),
     requestTimeoutMs: envInt("GODOT_MCP_TIMEOUT_MS", 30_000),
     startTimeoutMs: envInt("GODOT_MCP_START_TIMEOUT_MS", 45_000),
     stepTimeoutMs: envInt("GODOT_MCP_STEP_TIMEOUT_MS", 60_000),
     cliTimeoutMs: envInt("GODOT_MCP_CLI_TIMEOUT_MS", 180_000),
+    importTimeoutMs: envInt("GODOT_MCP_IMPORT_TIMEOUT_MS", 900_000),
     maxLogLines: envInt("GODOT_MCP_MAX_LOG_LINES", 4000),
     maxResponseBytes: envInt("GODOT_MCP_MAX_RESPONSE_BYTES", 8 * 1024 * 1024),
     cacheDir: process.env.GODOT_MCP_CACHE ?? path.join(cacheHome, "bismuth-mcp-godot"),

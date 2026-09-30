@@ -24,7 +24,7 @@ TypeScript-сервер (Node ≥ 20, ESM, сборка `tsc` → `dist/`), ко
 ```bash
 npm run build        # tsc -p tsconfig.json + chmod dist/index.js
 npm run typecheck    # tsc --noEmit
-npm test             # 29 тестов (нужен установленный Godot; ~20 c)
+npm test             # 31 тест (нужен установленный Godot; ~2 мин)
 npm run check:gd     # синтаксис GDScript хоста и аддона (godot --check-only)
 npm run doctor       # диагностика окружения (GODOT_PROJECT обязателен)
 npm run clean        # удалить .mcp/, .mcp-backups/, .mcp-shots/ из проекта
@@ -93,6 +93,16 @@ npm run typecheck && npm run check:gd && npm test
 
 Если менялся транспорт, рантайм или рендер — дополнительно `node scripts/e2e-demo.mjs`
 (должен напечатать `позиция игрока` с изменившимся `y` и создать PNG в `.mcp-shots/`).
+
+## Поведение без проекта и при импорте
+
+- Сервер **всегда стартует**, даже если `project.godot` не найден: `godot_status`
+  возвращает причину в `project.error`, остальные инструменты — ошибку `no_project`.
+  Это нужно для глобальной регистрации MCP-сервера в редакторе агента.
+- Импорт проекта (`godot --import`) запускается в фоне при старте сервера. Пока он
+  идёт, инструменты возвращают ошибку `importing`, а `godot_status.import.state`
+  показывает `running` → `ready`. Не меняй это на блокирующее ожидание: на проектах
+  с сотнями мегабайт ассетов импорт занимает минуты и упирается в таймаут запроса.
 
 ## Известные особенности Godot 4.7 (не «чинить»)
 
