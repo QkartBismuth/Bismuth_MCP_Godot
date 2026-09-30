@@ -15,7 +15,10 @@
   "files": [
     "dist",
     "godot",
-    "README.md"
+    "README.md",
+    "AGENT.md",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/postbuild.mjs",

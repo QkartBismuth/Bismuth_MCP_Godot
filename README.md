@@ -14,7 +14,9 @@ GDScript LSP и мост к уже открытому редактору.
 который запускается **внутри Godot**. Поэтому сцены, ресурсы и поведение игры агент
 изучает настоящим движком, а не приблизительной реконструкцией формата файлов.
 
-> Автор: [QkartBismuth](https://github.com/QkartBismuth) · лицензия MIT · версия 0.0.1
+> Автор: [QkartBismuth](https://github.com/QkartBismuth) · лицензия MIT ·
+> текущая версия [0.0.1](https://github.com/QkartBismuth/Bismuth_MCP_Godot/releases/tag/v0.0.1) ·
+> история изменений в [CHANGELOG.md](CHANGELOG.md)
 
 ---
 
