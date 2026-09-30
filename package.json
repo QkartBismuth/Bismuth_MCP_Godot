@@ -1,0 +1,56 @@
+{
+  "name": "bismuth-mcp-godot",
+  "version": "0.0.1",
+  "description": "Bismuth_MCP_Godot — MCP-сервер для работы AI-агента с движком Godot 4.x",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "bin": {
+    "bismuth-mcp-godot": "dist/index.js",
+    "bismuth-mcp-godot-doctor": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "godot",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/postbuild.mjs",
+    "dev": "tsc -p tsconfig.json --watch",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "doctor": "node dist/cli.js",
+    "check:gd": "bash scripts/check-gd.sh",
+    "clean": "node dist/cli.js --clean"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.31.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  },
+  "keywords": [
+    "mcp",
+    "godot",
+    "gdscript",
+    "ai-agent",
+    "model-context-protocol"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/QkartBismuth/Bismuth_MCP_Godot.git"
+  },
+  "homepage": "https://github.com/QkartBismuth/Bismuth_MCP_Godot#readme",
+  "bugs": {
+    "url": "https://github.com/QkartBismuth/Bismuth_MCP_Godot/issues"
+  },
+  "author": "QkartBismuth"
+}

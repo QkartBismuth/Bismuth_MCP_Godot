@@ -1,0 +1,6 @@
+# Артефакты тестового проекта
+.godot/
+.mcp/
+.mcp-backups/
+.mcp-shots/
+addons/bismuth_mcp_godot/
